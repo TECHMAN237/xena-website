@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type FormEvent, type MouseEvent, type ReactNode } from 'react'
-import { ArrowDown, ArrowRight, ArrowUpRight, Bell, BookOpen, Bot, CalendarDays, Check, ChevronDown, Menu, MessageCircle, Mic, Moon, Plus, Send, Sparkles, Sun, X } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { ArrowDown, ArrowRight, ArrowUpRight, Bell, BookOpen, Bot, CalendarDays, Check, ChevronDown, Clock, GraduationCap, Mail, Menu, MessageCircle, Mic, Moon, Phone as PhoneIcon, Play, Plus, Send, Sparkles, Sun, User, X } from 'lucide-react'
 import { FaFacebookF, FaInstagram, FaLinkedinIn, FaTiktok, FaWhatsapp, FaXTwitter, FaYoutube } from 'react-icons/fa6'
 
 export const GOOGLE_PLAY_URL = '#google-play-link-to-be-added'
@@ -67,23 +68,271 @@ const spotlight = (e: MouseEvent<HTMLElement>) => {
 /* ---------- atoms ---------- */
 function Mark({ small = false }: { small?: boolean }) { return <span className={`mark ${small ? 'mark-small' : ''}`} aria-hidden="true"><i /><b /></span> }
 function Wordmark() { const t = useT(); return <a className="brand" href="#top" aria-label={t('Xena AI, accueil', 'Xena AI, home')}><Mark small /><span>XENA</span><em>AI</em></a> }
+/* ---------- waitlist modal ---------- */
+const WA_TARGET_NUMBER = '237674264026'
+
+function WaitlistModal({ onClose }: { onClose: () => void }) {
+  const t = useT()
+  const [nom, setNom] = useState('')
+  const [phone, setPhone] = useState('')
+  const [filiere, setFiliere] = useState('')
+  const [email, setEmail] = useState('')
+  const [besoin, setBesoin] = useState('revisions')
+  const [message, setMessage] = useState('')
+  const [done, setDone] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [waLink, setWaLink] = useState('')
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    if (!nom.trim() || !phone.trim()) return
+    setLoading(true)
+
+    const besoinLabel = {
+      revisions: t('Explications de cours & révisions', 'Course explanations & revision'),
+      planning: t('Planning & rappels automatiques', 'Planning & automated reminders'),
+      exercices: t('Aide aux devoirs & exercices', 'Homework & exercise help'),
+      examens: t('Préparation examens & concours', 'Exam & competition prep'),
+      autre: t('Découverte globale / Autre', 'General discovery / Other')
+    }[besoin] || besoin
+
+    const text = [
+      `👋 ${t("Bonjour l'équipe Xena AI !", "Hello Xena AI team!")}`,
+      `🚀 ${t("Je souhaite rejoindre la liste d'attente prioritaire pour l'application Xena AI.", "I want to join the priority waitlist for the Xena AI app.")}`,
+      '',
+      `👤 ${t('Nom complet', 'Full Name')} : ${nom.trim()}`,
+      `📱 ${t('Numéro WhatsApp', 'WhatsApp')} : ${phone.trim()}`,
+      filiere.trim() ? `🎓 ${t('Établissement / Filière', 'School / Major')} : ${filiere.trim()}` : '',
+      email.trim() ? `📧 ${t('Email', 'Email')} : ${email.trim()}` : '',
+      `🎯 ${t('Besoin principal', 'Main interest')} : ${besoinLabel}`,
+      message.trim() ? `💬 ${t('Message', 'Message')} : ${message.trim()}` : '',
+      '',
+      t("✨ Merci de me réserver un accès anticipé !", "✨ Thank you for reserving my early access!")
+    ].filter(Boolean).join('\n')
+
+    const url = `https://wa.me/${WA_TARGET_NUMBER}?text=${encodeURIComponent(text)}`
+    setWaLink(url)
+
+    try {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch {
+      // fallback
+    }
+
+    setTimeout(() => {
+      setLoading(false)
+      setDone(true)
+    }, 450)
+  }
+
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
+  const onBackdrop = (e: MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) onClose()
+  }
+
+  return createPortal(
+    <div className="wl-backdrop" onClick={onBackdrop} role="dialog" aria-modal="true" aria-label={t("Rejoindre la liste d'attente", "Join the waitlist")}>
+      <div className="wl-modal">
+        <button className="wl-close" onClick={onClose} aria-label={t('Fermer', 'Close')}><X size={18} /></button>
+        
+        {!done ? (
+          <>
+            <div className="wl-head">
+              <div className="wl-icon"><Sparkles size={22} /></div>
+              <div className="wl-badge">
+                <FaWhatsapp size={14} className="wl-wa-badge-icon" />
+                <span>{t('Inscription WhatsApp directe : +237 674 26 40 26', 'Direct WhatsApp waitlist: +237 674 26 40 26')}</span>
+              </div>
+              <h3>{t('Rejoins la liste d’attente VIP', 'Join the VIP waitlist')}</h3>
+              <p>{t('Sois parmi les premiers étudiants à tester Xena AI au Cameroun. Tes informations sont directement transmises sur notre WhatsApp pour réserver ta place.', 'Be among the first students to test Xena AI in Cameroon. Your information is sent directly to our WhatsApp to reserve your spot.')}</p>
+            </div>
+
+            <form className="wl-form" onSubmit={submit}>
+              <div className="wl-field">
+                <label htmlFor="wl-nom">{t('Nom complet *', 'Full name *')}</label>
+                <div className="wl-input-wrap">
+                  <User size={16} className="wl-input-icon" />
+                  <input
+                    id="wl-nom"
+                    type="text"
+                    required
+                    value={nom}
+                    onChange={e => setNom(e.target.value)}
+                    placeholder={t('Ex : Kevin Ngono ou Aïcha Diallo', 'Ex: Kevin Ngono or Aicha Diallo')}
+                  />
+                </div>
+              </div>
+
+              <div className="wl-field">
+                <label htmlFor="wl-phone">{t('Numéro WhatsApp *', 'WhatsApp number *')}</label>
+                <div className="wl-input-wrap">
+                  <PhoneIcon size={16} className="wl-input-icon" />
+                  <input
+                    id="wl-phone"
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    placeholder={t('Ex : 674264026 ou +237 ...', 'Ex: 674264026 or +237 ...')}
+                  />
+                </div>
+              </div>
+
+              <div className="wl-grid-fields">
+                <div className="wl-field">
+                  <label htmlFor="wl-filiere">{t('Filière / Niveau (optionnel)', 'Major / Level (optional)')}</label>
+                  <div className="wl-input-wrap">
+                    <GraduationCap size={16} className="wl-input-icon" />
+                    <input
+                      id="wl-filiere"
+                      type="text"
+                      value={filiere}
+                      onChange={e => setFiliere(e.target.value)}
+                      placeholder={t('Ex : Université, Terminale...', 'Ex: University, High School...')}
+                    />
+                  </div>
+                </div>
+
+                <div className="wl-field">
+                  <label htmlFor="wl-email">{t('Email (optionnel)', 'Email (optional)')}</label>
+                  <div className="wl-input-wrap">
+                    <Mail size={16} className="wl-input-icon" />
+                    <input
+                      id="wl-email"
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder={t('ton@email.com', 'your@email.com')}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="wl-field">
+                <label htmlFor="wl-besoin">{t('Ce que tu attends le plus de Xena', 'What you need most from Xena')}</label>
+                <select
+                  id="wl-besoin"
+                  className="wl-select"
+                  value={besoin}
+                  onChange={e => setBesoin(e.target.value)}
+                >
+                  <option value="revisions">📚 {t('Explications de cours & révisions', 'Course explanations & revision')}</option>
+                  <option value="planning">📅 {t('Planning & rappels intelligents', 'Smart planning & reminders')}</option>
+                  <option value="exercices">📝 {t('Aide aux devoirs & exercices', 'Homework & exercises help')}</option>
+                  <option value="examens">🎯 {t('Préparation examens / concours', 'Exam / competition prep')}</option>
+                  <option value="autre">💡 {t('Autre / Curieux de tester', 'Other / Curious to test')}</option>
+                </select>
+              </div>
+
+              <div className="wl-field">
+                <label htmlFor="wl-msg">{t('Un message ou une suggestion ? (optionnel)', 'Message or suggestion? (optional)')}</label>
+                <div className="wl-input-wrap">
+                  <input
+                    id="wl-msg"
+                    type="text"
+                    value={message}
+                    onChange={e => setMessage(e.target.value)}
+                    placeholder={t('Dis-nous ce qui t\'aiderait le plus...', 'Tell us what would help you most...')}
+                  />
+                </div>
+              </div>
+
+              <button type="submit" className={`wl-submit wl-wa-btn ${loading ? 'loading' : ''}`} disabled={loading}>
+                {loading ? (
+                  <span className="wl-spinner" />
+                ) : (
+                  <>
+                    <FaWhatsapp size={20} className="wl-btn-icon" />
+                    <span>{t('Envoyer via WhatsApp (674 264 026)', 'Submit via WhatsApp (674 264 026)')}</span>
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <p className="wl-privacy">
+              <Check size={13} /> {t('Aucun spam. Envoi direct et sécurisé vers le numéro WhatsApp 674264026.', 'No spam. Direct & secure submission to WhatsApp number 674264026.')}
+            </p>
+          </>
+        ) : (
+          <div className="wl-success">
+            <div className="wl-success-badge">
+              <FaWhatsapp size={38} />
+            </div>
+            <h3>{t('Demande préparée ! 🎉', 'Application ready! 🎉')}</h3>
+            <p>
+              {t(
+                'Merci ! Ton message d’inscription est préparé pour le numéro WhatsApp officiel ',
+                'Thank you! Your registration message is prepared for the official WhatsApp number '
+              )}
+              <strong>+237 674 264 026</strong>.
+            </p>
+            <p className="wl-success-tip">
+              {t(
+                'Si WhatsApp ne s\'est pas ouvert automatiquement, clique sur le bouton vert ci-dessous pour envoyer ton message :',
+                'If WhatsApp didn\'t open automatically, click the green button below to send your message:'
+              )}
+            </p>
+            {waLink && (
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="wl-submit wl-wa-btn"
+                style={{ textDecoration: 'none' }}
+              >
+                <FaWhatsapp size={20} />
+                <span>{t('Ouvrir WhatsApp maintenant', 'Open WhatsApp now')}</span>
+                <ArrowUpRight size={16} />
+              </a>
+            )}
+            <button className="wl-secondary-btn" onClick={onClose}>
+              {t('Fermer', 'Close')}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 function StoreButtons() {
   const t = useT()
-  return <div className="store-buttons">
-    <a href={APP_STORE_URL} className="store-badge" aria-label={t("Télécharger Xena dans l'App Store", 'Download Xena on the App Store')}>
-      <svg className="badge-logo apple-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701" /></svg>
-      <span className="badge-text"><small>{t('Télécharger dans l’', 'Download on the')}</small><strong>App Store</strong></span>
-    </a>
-    <a href={GOOGLE_PLAY_URL} className="store-badge" aria-label={t('Disponible sur Google Play', 'Get it on Google Play')}>
-      <svg className="badge-logo play-logo" viewBox="0 0 512 512" aria-hidden="true">
-        <path fill="#00d7fe" d="M48,59.49v393a4.33,4.33,0,0,0,7.37,3.07L260,256,55.37,56.42A4.33,4.33,0,0,0,48,59.49Z" />
-        <path fill="#00f076" d="M345.8,174,89.22,32.64l-.16-.09c-4.42-2.4-8.62,3.58-5,7.06l201.13,192.32Z" />
-        <path fill="#ff3a44" d="M449.38,231l-71.65-39.46L310.36,256l67.37,64.43L449.38,281C468.87,270.23,468.87,241.77,449.38,231Z" />
-        <path fill="#ffd400" d="M84.08,472.4c-3.6,3.48.6,9.46,5,7.06l.16-.09L345.8,338l-60.61-57.95Z" />
-      </svg>
-      <span className="badge-text"><small>{t('DISPONIBLE SUR', 'GET IT ON')}</small><strong>Google Play</strong></span>
-    </a>
-  </div>
+  const [showWL, setShowWL] = useState(false)
+  return (
+    <div className="store-buttons-wrap">
+      <button id="join-waitlist-btn" className="wl-cta-btn" onClick={() => setShowWL(true)}>
+        <span className="wl-cta-ring" aria-hidden="true" />
+        <Sparkles size={18} className="wl-cta-icon" />
+        {t('Rejoindre la liste d\'attente', 'Join the waiting list')}
+        <ArrowRight size={16} className="wl-cta-arrow" />
+      </button>
+      <div className="store-soon-row">
+        <div className="store-badge soon" aria-label={t('App Store — Bientôt disponible', 'App Store — Coming soon')}>
+          <svg className="badge-logo apple-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701" /></svg>
+          <span className="badge-text"><small>{t('Bientôt sur', 'Coming to')}</small><strong>App Store</strong></span>
+          <span className="soon-chip"><Clock size={10} />{t('Soon', 'Soon')}</span>
+        </div>
+        <div className="store-badge soon" aria-label={t('Google Play — Bientôt disponible', 'Google Play — Coming soon')}>
+          <svg className="badge-logo play-logo" viewBox="0 0 512 512" aria-hidden="true">
+            <path fill="#00d7fe" d="M48,59.49v393a4.33,4.33,0,0,0,7.37,3.07L260,256,55.37,56.42A4.33,4.33,0,0,0,48,59.49Z" />
+            <path fill="#00f076" d="M345.8,174,89.22,32.64l-.16-.09c-4.42-2.4-8.62,3.58-5,7.06l201.13,192.32Z" />
+            <path fill="#ff3a44" d="M449.38,231l-71.65-39.46L310.36,256l67.37,64.43L449.38,281C468.87,270.23,468.87,241.77,449.38,231Z" />
+            <path fill="#ffd400" d="M84.08,472.4c-3.6,3.48.6,9.46,5,7.06l.16-.09L345.8,338l-60.61-57.95Z" />
+          </svg>
+          <span className="badge-text"><small>{t('Bientôt sur', 'Coming to')}</small><strong>Google Play</strong></span>
+          <span className="soon-chip"><Clock size={10} />{t('Soon', 'Soon')}</span>
+        </div>
+      </div>
+      {showWL && <WaitlistModal onClose={() => setShowWL(false)} />}
+    </div>
+  )
 }
 
 function Navbar({ dark, setDark }: { dark: boolean; setDark: (v: boolean) => void }) {
@@ -96,7 +345,7 @@ function Navbar({ dark, setDark }: { dark: boolean; setDark: (v: boolean) => voi
     const on = () => { const h = document.documentElement; setScrolled(window.scrollY > 24); setProgress(window.scrollY / Math.max(1, h.scrollHeight - h.clientHeight)) }
     on(); window.addEventListener('scroll', on, { passive: true }); return () => window.removeEventListener('scroll', on)
   }, [])
-  const links: [string, string][] = [['#xena', 'Xena'], ['#features', t('Fonctionnalités', 'Features')], ['#how', t('Comment ça marche', 'How it works')], ['#faq', 'FAQ']]
+  const links: [string, string][] = [['#xena', 'Xena'], ['#features', t('Fonctionnalités', 'Features')], ['#how', t('Comment ça marche', 'How it works')], ['#videos', t('Vidéos', 'Videos')], ['#faq', 'FAQ']]
   const toggleLang = () => setLang(lang === 'fr' ? 'en' : 'fr')
   return <header className={`nav-wrap ${scrolled ? 'scrolled' : ''}`}>
     <div className="progress" style={{ transform: `scaleX(${progress})` }} />
@@ -298,6 +547,66 @@ function BrandStatement() {
   </section>
 }
 
+function Videos() {
+  const t = useT()
+  const [activeTab, setActiveTab] = useState<0|1>(0)
+  const videos = [
+    {
+      label: t('Démo de l\'app', 'App Demo'),
+      sub: t('Vois Xena en action', 'See Xena in action'),
+      id: '1fVoX-2gsHJwTm7lyMi-sCwRtT9YNm9_o',
+    },
+    {
+      label: t('Vidéo de présentation', 'Presentation Video'),
+      sub: t('Découvrir le projet', 'Discover the project'),
+      id: '18CfnH3BYR2OIKMpFIvTFC5jmgJjQm5Ca',
+    },
+  ]
+  const active = videos[activeTab]
+  return (
+    <section id="videos" className="section videos-section">
+      <Reveal className="section-intro">
+        <p className="kicker">{t('Xena en mouvement', 'Xena in motion')}</p>
+        <h2>{t('Vois comment ', 'See how ')}<span className="grad-text">{t('Xena fonctionne.', 'Xena works.')}</span></h2>
+        <p className="sub">{t('Regarde la démo et la présentation directement ici — aucun compte requis.', 'Watch the demo and the presentation right here — no account needed.')}</p>
+      </Reveal>
+      <Reveal className="videos-tabs" delay={80}>
+        {videos.map((v, i) => (
+          <button
+            key={i}
+            className={`video-tab ${activeTab === i ? 'active' : ''}`}
+            onClick={() => setActiveTab(i as 0|1)}
+          >
+            <span className="vtab-icon"><Play size={14} /></span>
+            <span>
+              <b>{v.label}</b>
+              <small>{v.sub}</small>
+            </span>
+          </button>
+        ))}
+      </Reveal>
+      <Reveal className="video-stage" delay={160}>
+        <div className="video-glow" aria-hidden="true" />
+        <div className="video-frame-wrap">
+          <iframe
+            key={active.id}
+            src={`https://drive.google.com/file/d/${active.id}/preview`}
+            className="video-iframe"
+            allow="autoplay"
+            allowFullScreen
+            title={active.label}
+            loading="lazy"
+          />
+        </div>
+        <div className="video-caption">
+          <span className="live" />
+          {active.label} — {active.sub}
+        </div>
+      </Reveal>
+    </section>
+  )
+}
+
 /* FAQ shared with the chatbot */
 const FAQS: { q: [string, string]; a: [string, string] }[] = [
   { q: ['Qu’est-ce que Xena ?', 'What is Xena?'], a: ['Xena est un compagnon IA pour étudiants : il t’aide à comprendre, organiser, planifier et rester constant, depuis une seule conversation.', 'Xena is an AI companion for students: it helps you understand, organize, plan and stay consistent, all from a single conversation.'] },
@@ -324,7 +633,7 @@ function FinalCTA() {
   const t = useT()
   return <section id="download" className="final">
     <div className="aurora soft" aria-hidden="true"><i /><i /><i /></div>
-    <Reveal><p className="kicker">{t('Prête quand tu l’es', 'Ready when you are')}</p><h2>{t('Commence avec ', 'Start with ')}<span className="grad-text">Xena.</span></h2><p className="sub">{t('Ton quotidien étudiant mérite plus qu’un chatbot.', 'Your student life deserves more than a chatbot.')}</p><StoreButtons /></Reveal>
+    <Reveal><p className="kicker">{t('Pr\u00eate quand tu l\u2019es', 'Ready when you are')}</p><h2>{t('Sois parmi les ', 'Be among the ')}<span className="grad-text">{t('premiers.', 'first.')}</span></h2><p className="sub">{t('Xena arrive bient\u00f4t. Inscris-toi pour \u00eatre notifi\u00e9 en avant-premi\u00e8re.', 'Xena is coming soon. Sign up to be notified first.')}</p><StoreButtons /></Reveal>
   </section>
 }
 function Footer() {
@@ -338,11 +647,12 @@ const INTENTS: { keys: string[]; a: Pair }[] = [
   { keys: ['bonjour', 'salut', 'coucou', 'hello', 'hi', 'hey'], a: ['Bonjour ! 👋 Je suis l’assistant de Xena. Posez-moi vos questions sur l’app.', 'Hello! 👋 I’m Xena’s assistant. Ask me anything about the app.'] },
   { keys: ['merci', 'thanks', 'thank'], a: ['Avec plaisir ! N’hésitez pas si vous avez d’autres questions. ✨', 'You’re welcome! Feel free to ask if you have more questions. ✨'] },
   { keys: ['rappel', 'remind', 'reminder', 'alarme', 'notification'], a: FAQS[1].a },
-  { keys: ['telecharg', 'download', 'app store', 'google play', 'android', 'ios', 'iphone', 'disponible', 'available', 'install', 'appareil', 'device'], a: FAQS[2].a },
+  { keys: ['telecharg', 'download', 'app store', 'google play', 'android', 'ios', 'iphone', 'disponible', 'available', 'install', 'appareil', 'device', 'waitlist', 'liste', 'attente', 'inscrire', 'inscription', 'notif', 'lancement', 'launch', 'bientot', 'soon'], a: ['Xena arrive bientôt ! Rejoins la liste d\'attente pour être notifié en avant-première — clique sur « Rejoindre la liste d\'attente » en haut de la page. 🚀', 'Xena is coming soon! Join the waiting list to be notified first — click "Join the waiting list" at the top of the page. 🚀'] },
   { keys: ['prix', 'gratuit', 'tarif', 'combien', 'abonnement', 'price', 'free', 'cost', 'pricing', 'subscription'], a: ['Les informations sur les tarifs seront communiquées au lancement de l’app. Restez à l’écoute !', 'Pricing details will be shared when the app launches. Stay tuned!'] },
   { keys: ['plan', 'revision', 'etude', 'etudier', 'planning', 'study', 'schedule', 'review', 'organis'], a: ['Xena organise tes révisions selon tes cours, ton temps et tes objectifs, puis te suit dans ta progression.', 'Xena organizes your revision around your courses, your time and your goals, then tracks your progress.'] },
   { keys: ['memoire', 'memory', 'retenir', 'remember', 'note'], a: ['Avec la mémoire utile, Xena garde une information importante près de toi et te la rappelle quand il le faut.', 'With useful memory, Xena keeps important information close and brings it back when you need it.'] },
   { keys: ['langue', 'language', 'francais', 'anglais', 'english', 'french'], a: ['Le site est disponible en français et en anglais : utilisez le bouton de langue en bas à droite.', 'The site is available in French and English: use the language button at the bottom right.'] },
+  { keys: ['video', 'demo', 'presentation', 'voir', 'watch', 'regarder'], a: ['Vous pouvez regarder la démo et la vidéo de présentation directement sur le site, dans la section Vidéos (sans compte requis) ! 🎬', 'You can watch the demo and the presentation video directly on the site, in the Videos section (no account needed)! 🎬'] },
   { keys: ['donnees', 'securite', 'confidential', 'privacy', 'data', 'security', 'prive'], a: ['Votre vie privée compte. Les détails seront disponibles dans la page Confidentialité.', 'Your privacy matters. Details will be available on the Privacy page.'] },
   { keys: ['contact', 'email', 'mail', 'support', 'aide', 'help', 'joindre', 'reach'], a: ['Vous pouvez nous écrire à contact@xena.ai ou nous suivre sur nos réseaux sociaux (bas de page).', 'You can write to us at contact@xena.ai or follow us on social media (page footer).'] },
   { keys: ['xena', 'quoi', 'what', 'qui', 'who', 'fonction', 'feature', 'faire', 'does', 'marche', 'work'], a: FAQS[0].a },
@@ -413,7 +723,7 @@ export default function App() {
   useEffect(() => { document.documentElement.lang = lang; localStorage.setItem('xena-lang', lang) }, [lang])
   return <LangCtx.Provider value={{ lang, setLang }}>
     <Navbar dark={dark} setDark={setDark} />
-    <main><Hero /><Marquee /><Stats /><HowItWorks /><Features /><Guide /><Screens /><BrandStatement /><FAQ /><FinalCTA /></main>
+    <main><Hero /><Marquee /><Stats /><HowItWorks /><Features /><Guide /><Screens /><BrandStatement /><Videos /><FAQ /><FinalCTA /></main>
     <Footer />
     <div className="fab-stack"><ChatWidget /></div>
   </LangCtx.Provider>
